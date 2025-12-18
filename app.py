@@ -1,17 +1,33 @@
 from flask import Flask, render_template, request, redirect, send_file
 import sqlite3
 import io
-import os  # IMPORTANT : Pour lire le port de Railway
+import os
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from flask_httpauth import HTTPBasicAuth
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+auth = HTTPBasicAuth()
+
+# =========================
+# SÉCURITÉ ADMIN
+# =========================
+# Modifiez le mot de passe ici
+users_auth = {
+    "admin": generate_password_hash("esi-echecs-2025")
+}
+
+@auth.verify_password
+def verify_password(username, password):
+    if username in users_auth and \
+            check_password_hash(users_auth.get(username), password):
+        return username
 
 # =========================
 # INITIALISATION DE LA DB
 # =========================
 def init_db():
-    # On utilise un chemin relatif simple pour Railway
     conn = sqlite3.connect('inscriptions.db')
     c = conn.cursor()
     c.execute('''
@@ -28,11 +44,10 @@ def init_db():
     conn.commit()
     conn.close()
 
-# On initialise la base au démarrage
 init_db()
 
 # =========================
-# FORMULAIRE
+# FORMULAIRE (PUBLIC)
 # =========================
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -46,7 +61,6 @@ def index():
         conn = sqlite3.connect('inscriptions.db')
         c = conn.cursor()
 
-        # Numéro automatique par promotion
         c.execute("SELECT COUNT(*) FROM users WHERE promotion = ?", (promotion,))
         count = c.fetchone()[0] + 1
         numero = str(count).zfill(3)
@@ -64,27 +78,28 @@ def index():
         finally:
             conn.close()
 
-        return f"<h3>Inscription réussie ✔ et Bienvenu dans le club d'échecs de l'ESI</h3><p>ID : <b>{user_id}</b></p><a href='/'>Retour</a>"
+        return f"<h3>Inscription réussie ✔</h3><p>ID : <b>{user_id}</b></p><a href='/'>Retour</a>"
 
     return render_template('index.html')
 
 # =========================
-# PAGE ADMIN
+# PAGE ADMIN (SÉCURISÉE)
 # =========================
 @app.route('/admin')
+@auth.login_required
 def admin():
     conn = sqlite3.connect('inscriptions.db')
     c = conn.cursor()
     c.execute("SELECT * FROM users")
     users = c.fetchall()
     conn.close()
-
     return render_template('admin.html', users=users)
 
 # =========================
-# SUPPRIMER UN UTILISATEUR
+# SUPPRIMER (SÉCURISÉ)
 # =========================
 @app.route('/delete/<int:id>')
+@auth.login_required
 def delete(id):
     conn = sqlite3.connect('inscriptions.db')
     c = conn.cursor()
@@ -94,9 +109,10 @@ def delete(id):
     return redirect('/admin')
 
 # =========================
-# EXPORT PDF
+# EXPORT PDF (SÉCURISÉ)
 # =========================
 @app.route('/export_pdf')
+@auth.login_required
 def export_pdf():
     conn = sqlite3.connect('inscriptions.db')
     c = conn.cursor()
@@ -107,10 +123,8 @@ def export_pdf():
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
-
     pdf.setFont("Helvetica-Bold", 12)
     pdf.drawString(40, height - 40, "LISTE DES INSCRITS")
-
     pdf.setFont("Helvetica", 10)
     y = height - 70
 
@@ -125,19 +139,11 @@ def export_pdf():
 
     pdf.save()
     buffer.seek(0)
-
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name="liste_inscrits.pdf",
-        mimetype="application/pdf"
-    )
+    return send_file(buffer, as_attachment=True, download_name="liste_inscrits.pdf", mimetype="application/pdf")
 
 # =========================
-# LANCEMENT (CORRIGÉ POUR RAILWAY)
+# LANCEMENT
 # =========================
 if __name__ == '__main__':
-    # Railway définit la variable d'environnement PORT. En local, on utilise 5000.
     port = int(os.environ.get("PORT", 5000))
-    # host='0.0.0.0' est obligatoire pour que le serveur soit visible sur le web
     app.run(host='0.0.0.0', port=port)
