@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, send_file
-import psycopg2 # Pour PostgreSQL
+import psycopg2
 from psycopg2.extras import RealDictCursor
 import io
 import os
@@ -14,46 +14,66 @@ auth = HTTPBasicAuth()
 # =========================
 # SÉCURITÉ ADMIN
 # =========================
+# Identifiants pour la page /admin
 users_auth = {
     "admin": generate_password_hash("esi-echecs-2025")
 }
 
+
 @auth.verify_password
 def verify_password(username, password):
-    if username in users_auth and check_password_hash(users_auth.get(username), password):
+    if username in users_auth and \
+            check_password_hash(users_auth.get(username), password):
         return username
 
+
 # =========================
-# CONNEXION POSTGRESQL
+# CONNEXION POSTGRESQL (CORRIGÉE)
 # =========================
 def get_db_connection():
-    # Railway injecte DATABASE_URL automatiquement
+    # Récupération de l'URL depuis les variables Railway
     url = os.environ.get('DATABASE_URL')
+
+    if not url:
+        raise ValueError("ERREUR : La variable DATABASE_URL est absente sur Railway.")
+
+    # Correction pour les versions récentes de SQLAlchemy/psycopg2
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+
     return psycopg2.connect(url)
 
-def init_db():
-    conn = get_db_connection()
-    c = conn.cursor()
-    # Note : On utilise SERIAL pour l'auto-incrément au lieu de INTEGER PRIMARY KEY AUTOINCREMENT
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            user_id TEXT UNIQUE,
-            nom TEXT,
-            postnom TEXT,
-            prenom TEXT,
-            telephone TEXT,
-            promotion TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
 
+def init_db():
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        # Création de la table si elle n'existe pas
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                user_id TEXT UNIQUE,
+                nom TEXT,
+                postnom TEXT,
+                prenom TEXT,
+                telephone TEXT,
+                promotion TEXT
+            )
+        ''')
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Erreur initialisation DB : {e}")
+
+
+# Initialisation au démarrage
 init_db()
+
 
 # =========================
 # ROUTES
 # =========================
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -66,6 +86,7 @@ def index():
         conn = get_db_connection()
         c = conn.cursor()
 
+        # Calcul du numéro d'ordre
         c.execute("SELECT COUNT(*) FROM users WHERE promotion = %s", (promotion,))
         count = c.fetchone()[0] + 1
         numero = str(count).zfill(3)
@@ -78,7 +99,7 @@ def index():
             """, (user_id, nom, postnom, prenom, telephone, promotion))
             conn.commit()
         except Exception as e:
-            return f"Erreur : {e}"
+            return f"Erreur lors de l'inscription : {e}"
         finally:
             conn.close()
 
@@ -86,15 +107,17 @@ def index():
 
     return render_template('index.html')
 
+
 @app.route('/admin')
 @auth.login_required
 def admin():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM users")
+    c.execute("SELECT * FROM users ORDER BY id DESC")
     users = c.fetchall()
     conn.close()
     return render_template('admin.html', users=users)
+
 
 @app.route('/delete/<int:id>')
 @auth.login_required
@@ -105,6 +128,7 @@ def delete(id):
     conn.commit()
     conn.close()
     return redirect('/admin')
+
 
 @app.route('/export_pdf')
 @auth.login_required
@@ -117,16 +141,30 @@ def export_pdf():
 
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
-    y = 800
-    pdf.drawString(40, y, "LISTE DES INSCRITS")
-    y -= 30
+    width, height = A4
+
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(200, height - 50, "LISTE DES MEMBRES - CLUB ECHECS")
+
+    pdf.setFont("Helvetica", 10)
+    y = height - 100
     for u in users:
-        pdf.drawString(40, y, f"{u[0]} | {u[1]} {u[2]} | {u[5]}")
+        text = f"ID: {u[0]} | {u[1]} {u[2]} | Promo: {u[5]} | Tel: {u[4]}"
+        pdf.drawString(50, y, text)
         y -= 20
+        if y < 50:
+            pdf.showPage()
+            y = height - 50
+
     pdf.save()
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name="liste.pdf", mimetype="application/pdf")
+    return send_file(buffer, as_attachment=True, download_name="inscrits_echecs.pdf", mimetype="application/pdf")
 
+
+# =========================
+# LANCEMENT
+# =========================
 if __name__ == '__main__':
+    # Configuration du port pour Railway
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
