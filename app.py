@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, send_file
 import sqlite3
 import io
+import os  # IMPORTANT : Pour lire le port de Railway
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
@@ -10,6 +11,7 @@ app = Flask(__name__)
 # INITIALISATION DE LA DB
 # =========================
 def init_db():
+    # On utilise un chemin relatif simple pour Railway
     conn = sqlite3.connect('inscriptions.db')
     c = conn.cursor()
     c.execute('''
@@ -26,6 +28,7 @@ def init_db():
     conn.commit()
     conn.close()
 
+# On initialise la base au démarrage
 init_db()
 
 # =========================
@@ -50,15 +53,18 @@ def index():
 
         user_id = f"{promotion}-{nom}-{numero}"
 
-        c.execute("""
-            INSERT INTO users (user_id, nom, postnom, prenom, telephone, promotion)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (user_id, nom, postnom, prenom, telephone, promotion))
+        try:
+            c.execute("""
+                INSERT INTO users (user_id, nom, postnom, prenom, telephone, promotion)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (user_id, nom, postnom, prenom, telephone, promotion))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            return "Erreur : Cet utilisateur existe déjà."
+        finally:
+            conn.close()
 
-        conn.commit()
-        conn.close()
-
-        return f"<h3>Inscription réussie ✔ et Bienvenu dans le club d'échecs de l'ESI</h3><p>ID : <b>{user_id}</b></p>"
+        return f"<h3>Inscription réussie ✔ et Bienvenu dans le club d'échecs de l'ESI</h3><p>ID : <b>{user_id}</b></p><a href='/'>Retour</a>"
 
     return render_template('index.html')
 
@@ -128,7 +134,10 @@ def export_pdf():
     )
 
 # =========================
-# LANCEMENT
+# LANCEMENT (CORRIGÉ POUR RAILWAY)
 # =========================
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Railway définit la variable d'environnement PORT. En local, on utilise 5000.
+    port = int(os.environ.get("PORT", 5000))
+    # host='0.0.0.0' est obligatoire pour que le serveur soit visible sur le web
+    app.run(host='0.0.0.0', port=port)
