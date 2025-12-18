@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, send_file
 import psycopg2
-from psycopg2.extras import RealDictCursor
 import io
 import os
 from reportlab.lib.pagesizes import A4
@@ -14,7 +13,6 @@ auth = HTTPBasicAuth()
 # =========================
 # SÉCURITÉ ADMIN
 # =========================
-# Identifiants pour la page /admin
 users_auth = {
     "admin": generate_password_hash("esi-echecs-2025")
 }
@@ -28,16 +26,17 @@ def verify_password(username, password):
 
 
 # =========================
-# CONNEXION POSTGRESQL (CORRIGÉE)
+# CONNEXION POSTGRESQL
 # =========================
 def get_db_connection():
-    # Récupération de l'URL depuis les variables Railway
+    # Railway injecte l'url dans DATABASE_URL
     url = os.environ.get('DATABASE_URL')
 
+    # Si Railway ne la trouve pas, on utilise l'url en dur (fallback)
     if not url:
-        raise ValueError("ERREUR : La variable DATABASE_URL est absente sur Railway.")
+        url = "postgresql://postgres:xwpTRSXROyoktPEmOiswTYAeJrDkRJJw@postgres.railway.internal:5432/railway"
 
-    # Correction pour les versions récentes de SQLAlchemy/psycopg2
+    # Correction indispensable : postgres:// doit être postgresql:// pour Python
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
 
@@ -48,7 +47,6 @@ def init_db():
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        # Création de la table si elle n'existe pas
         c.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -62,11 +60,12 @@ def init_db():
         ''')
         conn.commit()
         conn.close()
+        print("Base de données initialisée avec succès.")
     except Exception as e:
-        print(f"Erreur initialisation DB : {e}")
+        print(f"Erreur lors de l'initialisation de la DB : {e}")
 
 
-# Initialisation au démarrage
+# Initialisation forcée au démarrage
 init_db()
 
 
@@ -83,27 +82,26 @@ def index():
         telephone = request.form['telephone']
         promotion = request.form['promotion']
 
-        conn = get_db_connection()
-        c = conn.cursor()
-
-        # Calcul du numéro d'ordre
-        c.execute("SELECT COUNT(*) FROM users WHERE promotion = %s", (promotion,))
-        count = c.fetchone()[0] + 1
-        numero = str(count).zfill(3)
-        user_id = f"{promotion}-{nom}-{numero}"
-
         try:
+            conn = get_db_connection()
+            c = conn.cursor()
+
+            # Compter pour générer le numéro (ex: 001, 002)
+            c.execute("SELECT COUNT(*) FROM users WHERE promotion = %s", (promotion,))
+            count = c.fetchone()[0] + 1
+            numero = str(count).zfill(3)
+            user_id = f"{promotion}-{nom}-{numero}"
+
             c.execute("""
                 INSERT INTO users (user_id, nom, postnom, prenom, telephone, promotion)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (user_id, nom, postnom, prenom, telephone, promotion))
-            conn.commit()
-        except Exception as e:
-            return f"Erreur lors de l'inscription : {e}"
-        finally:
-            conn.close()
 
-        return f"<h3>Inscription réussie ✔</h3><p>ID : <b>{user_id}</b></p><a href='/'>Retour</a>"
+            conn.commit()
+            conn.close()
+            return f"<h3>Inscription réussie ✔</h3><p>ID : <b>{user_id}</b></p><a href='/'>Retour</a>"
+        except Exception as e:
+            return f"Erreur base de données : {e}"
 
     return render_template('index.html')
 
@@ -111,12 +109,15 @@ def index():
 @app.route('/admin')
 @auth.login_required
 def admin():
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT * FROM users ORDER BY id DESC")
-    users = c.fetchall()
-    conn.close()
-    return render_template('admin.html', users=users)
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT * FROM users ORDER BY id DESC")
+        users = c.fetchall()
+        conn.close()
+        return render_template('admin.html', users=users)
+    except Exception as e:
+        return f"Erreur Admin : {e}"
 
 
 @app.route('/delete/<int:id>')
@@ -141,30 +142,24 @@ def export_pdf():
 
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-
+    y = 800
     pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawString(200, height - 50, "LISTE DES MEMBRES - CLUB ECHECS")
-
+    pdf.drawString(50, y, "LISTE DES INSCRITS - CLUB ECHECS ESI")
+    y -= 40
     pdf.setFont("Helvetica", 10)
-    y = height - 100
+
     for u in users:
-        text = f"ID: {u[0]} | {u[1]} {u[2]} | Promo: {u[5]} | Tel: {u[4]}"
-        pdf.drawString(50, y, text)
+        pdf.drawString(50, y, f"{u[0]} | {u[1]} {u[2]} | {u[5]} | Tel: {u[4]}")
         y -= 20
         if y < 50:
             pdf.showPage()
-            y = height - 50
+            y = 800
 
     pdf.save()
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name="inscrits_echecs.pdf", mimetype="application/pdf")
+    return send_file(buffer, as_attachment=True, download_name="liste_club.pdf", mimetype="application/pdf")
 
 
-# =========================
-# LANCEMENT
-# =========================
 if __name__ == '__main__':
-    # Configuration du port pour Railway
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
