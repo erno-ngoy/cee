@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Formulaire d'inscription</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 420px;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: fadeIn 0.8s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #2a5298;
+        }
+
+        label {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 14px;
+            margin-bottom: 16px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus, select:focus {
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42,82,152,0.15);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(30,60,114,0.4);
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                margin: 15px;
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Bienvenu dans le club d'échecs de l'ESI </br>
+        Inscription Étudiant</h2>
+
+    <form method="post">
+
+        <input type="text" name="nom" placeholder="Nom" required>
+
+        <input type="text" name="postnom" placeholder="Post-nom" required>
+
+        <input type="text" name="prenom" placeholder="Prénom" required>
+
+        <input type="text" name="telephone" placeholder="Téléphone" required>
+
+        <label>Promotion</label>
+        <select name="promotion" required>
+            <option value="">Sélectionner la promotion</option>
+
+            <option value="PEA">Pré-ESI A</option>
+            <option value="PEB">Pré-ESI B</option>
+            <option value="PEC">Pré-ESI C</option>
+
+            <option value="B1GE">BAC 1 Génie Electrique</option>
+            <option value="B1GC">BAC 1 Génie Civil</option>
+            <option value="B1DP">BAC 1 Génie des Procédés</option>
+            <option value="B1GI">BAC 1 Génie Informatique</option>
+
+            <option value="B2GE">BAC 2 Génie Electrique</option>
+            <option value="B2GC">BAC 2 Génie Civil</option>
+            <option value="B2DP">BAC 2 Génie des Procédés</option>
+            <option value="B2GI">BAC 2 Génie Informatique</option>
+
+            <option value="B3GE">BAC 3 Génie Electrique</option>
+            <option value="B3GC">BAC 3 Génie Civil</option>
+            <option value="B3DP">BAC 3 Génie des Procédés</option>
+            <option value="B3GI">BAC 3 Génie Informatique</option>
+
+            <option value="M1">Master 1</option>
+            <option value="M2">Master 2</option>
+        </select>
+
+        <button type="submit">S'inscrire</button>
+
+    </form>
+</div>
+
+</body>
+</html>
