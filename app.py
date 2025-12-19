@@ -20,25 +20,30 @@ auth = HTTPBasicAuth()
 # =========================
 # CONFIGURATION EMAIL
 # =========================
-# REMPLACER PAR VOTRE EMAIL ET VOTRE MOT DE PASSE D'APPLICATION GMAIL
-EMAIL_EXPEDITEUR = "votre-email@gmail.com"
+# REMPLACE BIEN "ton-email@gmail.com" par ton adresse réelle
+EMAIL_EXPEDITEUR = "ton-email@gmail.com"
 MOT_DE_PASSE_APP = "ogaipenscpoebifz"
 DESTINATAIRES = ["ernongoy@gmail.com", "ernoerno226@gmail.com"]
 
 
 def notifier_activite(sujet, message_corps):
-    """Fonction pour envoyer des notifications par email"""
+    """Fonction corrigée pour Railway (Port 587 + Timeout)"""
     try:
         msg = MIMEText(message_corps)
         msg['Subject'] = f"♟️ ESI ECHECS : {sujet}"
         msg['From'] = EMAIL_EXPEDITEUR
         msg['To'] = ", ".join(DESTINATAIRES)
 
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as serveur:
-            serveur.login(EMAIL_EXPEDITEUR, MOT_DE_PASSE_APP)
-            serveur.sendmail(EMAIL_EXPEDITEUR, DESTINATAIRES, msg.as_string())
+        # Connexion via port 587 (plus stable sur Railway) avec un timeout de 10s
+        serveur = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
+        serveur.starttls()  # Sécurisation de la connexion
+        serveur.login(EMAIL_EXPEDITEUR, MOT_DE_PASSE_APP)
+        serveur.sendmail(EMAIL_EXPEDITEUR, DESTINATAIRES, msg.as_string())
+        serveur.quit()
+        print(f"Succès : Email envoyé pour {sujet}")
     except Exception as e:
-        print(f"Erreur notification email : {e}")
+        # L'erreur s'affiche dans les logs mais ne bloque plus l'utilisateur (Error 500 évitée)
+        print(f"ERREUR EMAIL (non fatale) : {e}")
 
 
 # =========================
@@ -203,7 +208,6 @@ def admin():
 def add_point(id):
     conn = get_db_connection()
     c = conn.cursor()
-    # Récupérer les infos pour l'email
     c.execute("SELECT prenom, nom FROM users WHERE id = %s", (id,))
     u = c.fetchone()
 
