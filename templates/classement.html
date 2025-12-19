@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classement - Club Echecs ESI</title>
+    <style>
+        body { margin: 0; background: #0f2027; background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); font-family: 'Segoe UI', sans-serif; color: white; min-height: 100vh; padding: 20px; }
+        .container { max-width: 700px; margin: auto; }
+        h1 { text-align: center; color: #ffd700; text-transform: uppercase; border-bottom: 2px solid #ffd700; padding-bottom: 10px; }
+        .row { display: flex; align-items: center; background: rgba(255,255,255,0.1); margin: 10px 0; padding: 15px; border-radius: 12px; backdrop-filter: blur(5px); }
+        .rank { width: 40px; font-weight: bold; font-size: 1.2em; color: #ffd700; }
+        .name { flex-grow: 1; margin-left: 10px; }
+        .pts { background: #ffd700; color: black; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+        .top1 { background: rgba(255, 215, 0, 0.2); border: 1px solid #ffd700; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 Leaderboard ESI</h1>
+        {% for m in members %}
+        <div class="row {% if loop.index == 1 %}top1{% endif %}">
+            <div class="rank">#{{ loop.index }}</div>
+            <div class="name">
+                <div style="font-weight: bold;">{{ m[0] }} {{ m[1] }}</div>
+                <div style="font-size: 0.8em; opacity: 0.7;">{{ m[2] }}</div>
+            </div>
+            <div class="pts">{{ m[3] }} PTS</div>
+        </div>
+        {% endfor %}
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="/" style="color: white; text-decoration: none; opacity: 0.6;">← Revenir à l'inscription</a>
+        </div>
+    </div>
+</body>
+</html>

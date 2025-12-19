@@ -9,10 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        * {
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
 
         body {
             margin: 0;
@@ -22,18 +19,13 @@
             overflow-x: hidden;
         }
 
-        /* ♟️ ANIMATION ÉCHECS */
         body::before {
             content: "♟ ♜ ♞ ♝ ♚ ♛ ♟ ♜ ♞ ♝ ♚ ♛";
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 200%;
-            height: 200%;
-            font-size: 40px;
-            color: rgba(255,255,255,0.05);
+            top: 0; left: 0; width: 200%; height: 200%;
+            font-size: 40px; color: rgba(255,255,255,0.05);
             animation: moveChess 30s linear infinite;
-            white-space: nowrap;
+            white-space: nowrap; z-index: -1;
         }
 
         @keyframes moveChess {
@@ -41,21 +33,11 @@
             to { transform: translateX(-50%) translateY(-50%); }
         }
 
-        .container {
-            position: relative;
-            padding: 20px;
-            z-index: 1;
-            max-width: 1200px;
-            margin: auto;
-        }
+        .container { position: relative; padding: 20px; z-index: 1; max-width: 1200px; margin: auto; }
 
-        h2 {
-            text-align: center;
-            margin-bottom: 25px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
+        h2 { text-align: center; margin-bottom: 25px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
 
-        /* 📊 DASHBOARD STYLES */
+        /* DASHBOARD STYLES */
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -75,7 +57,7 @@
 
         .stat-card:hover { transform: translateY(-5px); }
         .stat-card h3 { margin: 0; font-size: 14px; opacity: 0.8; }
-        .stat-card .value { font-size: 32px; font-weight: 700; margin: 10px 0; color: #00c853; }
+        .stat-card .value { font-size: 32px; font-weight: 700; margin: 10px 0; color: #ffd700; }
 
         .charts-container {
             display: grid;
@@ -91,7 +73,6 @@
             height: 300px;
         }
 
-        /* ELEMENTS EXISTANTS */
         .top-bar {
             display: flex;
             flex-wrap: wrap;
@@ -118,10 +99,13 @@
             cursor: pointer;
             font-weight: 500;
             transition: 0.3s;
+            text-decoration: none;
+            display: inline-block;
         }
 
         .btn-pdf { background: #00c853; color: #fff; }
-        .btn-pdf:hover { background: #00a042; }
+        .btn-win { background: #ffd700; color: #000; font-weight: bold; margin-right: 5px; }
+        .btn-win:hover { background: #ffc107; }
 
         table {
             width: 100%;
@@ -133,14 +117,16 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
 
-        th, td { padding: 12px; text-align: center; font-size: 14px; }
+        th, td { padding: 12px; text-align: center; font-size: 14px; vertical-align: middle; }
         th { background: #263238; color: #fff; }
         tr:nth-child(even) { background: #f2f2f2; }
-        .delete-btn { color: red; text-decoration: none; font-weight: bold; font-size: 18px; }
+        .delete-btn { color: #d32f2f; text-decoration: none; font-weight: bold; font-size: 18px; }
+        .pts-badge { background: #1a2a6c; color: #fff; padding: 4px 10px; border-radius: 20px; font-weight: bold; }
 
         @media (max-width: 768px) {
             .charts-container { grid-template-columns: 1fr; }
-            table { font-size: 12px; }
+            table { font-size: 11px; }
+            .btn-win { padding: 5px; font-size: 10px; }
         }
     </style>
 </head>
@@ -156,59 +142,55 @@
             <small>Inscrits actifs</small>
         </div>
         <div class="stat-card">
-            <h3>Nouveaux (7j)</h3>
-            <div class="value" style="color: #ffb300;">+12</div>
-            <small>Cette semaine</small>
+            <h3>Leader Score</h3>
+            <div class="value" style="color: #00c853;">
+                {% if users %}{{ users[0][7] }}{% else %}0{% endif %} Pts
+            </div>
+            <small>Meilleur score actuel</small>
         </div>
         <div class="stat-card">
-            <h3>Taux Participation</h3>
-            <div class="value" style="color: #00e5ff;">85%</div>
-            <small>Moyenne club</small>
+            <h3>Actions</h3>
+            <div style="margin-top:15px;">
+                <a href="/classement" class="btn btn-pdf" style="background:#2c5364;">👁️ Voir Classement</a>
+            </div>
         </div>
     </div>
 
     <div class="charts-container">
-        <div class="chart-box">
-            <canvas id="promoChart"></canvas>
-        </div>
-        <div class="chart-box">
-            <canvas id="activityChart"></canvas>
-        </div>
+        <div class="chart-box"><canvas id="promoChart"></canvas></div>
+        <div class="chart-box"><canvas id="activityChart"></canvas></div>
     </div>
 
     <div class="top-bar">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="🔍 Rechercher un étudiant (Nom, ID, Promotion...)">
+            <input type="text" id="searchInput" placeholder="🔍 Rechercher (Nom, ID, Promo...)">
         </div>
-        <a href="/export_pdf">
-            <button class="btn btn-pdf">📄 Télécharger PDF</button>
-        </a>
+        <a href="/export_pdf" class="btn btn-pdf">📄 Télécharger PDF</a>
     </div>
 
     <table id="usersTable">
         <thead>
         <tr>
             <th>ID</th>
-            <th>Nom</th>
-            <th>Post-nom</th>
-            <th>Prénom</th>
-            <th>Téléphone</th>
+            <th>Nom Complet</th>
             <th>Promotion</th>
-            <th>Action</th>
+            <th>Points</th>
+            <th>Actions</th>
         </tr>
         </thead>
         <tbody>
         {% for user in users %}
         <tr>
-            <td>{{ user[1] }}</td>
-            <td>{{ user[2] }}</td>
-            <td>{{ user[3] }}</td>
-            <td>{{ user[4] }}</td>
-            <td>{{ user[5] }}</td>
+            <td style="font-family: monospace; font-weight: bold;">{{ user[1] }}</td>
+            <td style="text-align: left;">{{ user[2] }} {{ user[3] }} {{ user[4] }}</td>
             <td>{{ user[6] }}</td>
+            <td><span class="pts-badge">{{ user[7] }}</span></td>
             <td>
+                <a class="btn btn-win" href="/add_point/{{ user[0] }}" title="Ajouter une victoire">
+                    +1 Victoire 🏆
+                </a>
                 <a class="delete-btn" href="/delete/{{ user[0] }}"
-                   onclick="return confirm('Supprimer cet utilisateur ?')">
+                   onclick="return confirm('Supprimer cet utilisateur ?')" title="Supprimer">
                     🗑
                 </a>
             </td>
@@ -229,22 +211,21 @@
         });
     });
 
-    // 📈 GRAPHIQUE PAR PROMOTION (Exemple statique - adaptable via Jinja2)
+    // 📈 GRAPHIQUE PAR PROMOTION
     const ctxPromo = document.getElementById('promoChart').getContext('2d');
     new Chart(ctxPromo, {
         type: 'doughnut',
         data: {
-            labels: ['L1 GI', 'L2 GI', 'L3 GI', 'Master', 'Pré-ESI'],
+            labels: ['Génie Info', 'Génie Civil', 'Génie Élec', 'Procédés', 'Pré-ESI'],
             datasets: [{
-                label: 'Membres',
-                data: [12, 19, 8, 5, 15],
-                backgroundColor: ['#00c853', '#00e5ff', '#ffb300', '#f44336', '#9c27b0']
+                data: [15, 10, 8, 5, 20], // À dynamiser plus tard si besoin
+                backgroundColor: ['#1a2a6c', '#00c853', '#00e5ff', '#ffb300', '#f44336']
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { title: { display: true, text: 'Répartition par Promotion' } }
+            plugins: { title: { display: true, text: 'Répartition des Membres' } }
         }
     });
 
@@ -266,7 +247,7 @@
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { title: { display: true, text: 'Activité Inscriptions (7 derniers jours)' } }
+            plugins: { title: { display: true, text: 'Nouveaux Membres (7j)' } }
         }
     });
 </script>
