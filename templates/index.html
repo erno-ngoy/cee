@@ -5,6 +5,9 @@
     <title>Inscription - Club Échecs ESI</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2821792122445723"
+     crossorigin="anonymous"></script>
+
     <style>
         * {
             box-sizing: border-box;
@@ -13,25 +16,23 @@
 
         body {
             margin: 0;
-            /* Permet à la page de s'étendre au-delà de 100% de la hauteur si nécessaire */
             min-height: 100vh;
-            /* Dégradé fixe pour éviter les coupures lors du défilement */
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
             background-attachment: fixed;
             display: flex;
+            flex-direction: column; /* Aligne la pub et la carte verticalement */
             justify-content: center;
             align-items: center;
-            /* Activation du défilement vertical */
             overflow-y: auto;
             overflow-x: hidden;
             position: relative;
-            padding: 40px 20px;
+            padding: 20px;
         }
 
         /* ♟️ ANIMATION D'ARRIÈRE-PLAN FIXE */
         body::before {
             content: "♟ ♜ ♞ ♝ ♚ ♛ ♟ ♜ ♞ ♝ ♚ ♛";
-            position: fixed; /* Reste en place pendant le scroll */
+            position: fixed;
             top: -50%;
             left: -50%;
             width: 200%;
@@ -47,6 +48,15 @@
         @keyframes moveChess {
             from { transform: rotate(0deg) translateX(0); }
             to { transform: rotate(5deg) translateX(-20%); }
+        }
+
+        /* CONTENEUR PUBLICITAIRE */
+        .ad-top {
+            width: 100%;
+            max-width: 420px;
+            margin-bottom: 20px;
+            z-index: 1;
+            text-align: center;
         }
 
         .card {
@@ -149,6 +159,18 @@
 </head>
 <body>
 
+<div class="ad-top">
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-2821792122445723"
+         data-ad-slot="auto"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+</div>
+
 <div class="card">
     <h2>
         <span class="chess-icon">♟️</span>
@@ -158,11 +180,8 @@
 
     <form method="post">
         <input type="text" name="nom" placeholder="Nom" required>
-
         <input type="text" name="postnom" placeholder="Post-nom" required>
-
         <input type="text" name="prenom" placeholder="Prénom" required>
-
         <input type="text" name="telephone" placeholder="Numéro de Téléphone" required>
 
         <label>Votre Promotion</label>
