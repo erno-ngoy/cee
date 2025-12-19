@@ -13,20 +13,25 @@
 
         body {
             margin: 0;
+            /* Permet à la page de s'étendre au-delà de 100% de la hauteur si nécessaire */
             min-height: 100vh;
-            /* Dégradé sombre rappelant un plateau de luxe */
+            /* Dégradé fixe pour éviter les coupures lors du défilement */
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            background-attachment: fixed;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            /* Activation du défilement vertical */
+            overflow-y: auto;
+            overflow-x: hidden;
             position: relative;
+            padding: 40px 20px;
         }
 
-        /* ♟️ ANIMATION D'ARRIÈRE-PLAN (Pièces d'échecs flottantes) */
+        /* ♟️ ANIMATION D'ARRIÈRE-PLAN FIXE */
         body::before {
             content: "♟ ♜ ♞ ♝ ♚ ♛ ♟ ♜ ♞ ♝ ♚ ♛";
-            position: absolute;
+            position: fixed; /* Reste en place pendant le scroll */
             top: -50%;
             left: -50%;
             width: 200%;
@@ -80,6 +85,21 @@
             letter-spacing: 1px;
         }
 
+        .chess-icon {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2c5364;
+            margin-bottom: 8px;
+            display: block;
+            margin-left: 5px;
+        }
+
         input, select {
             width: 100%;
             padding: 14px;
@@ -96,15 +116,6 @@
             border-color: #2c5364;
             box-shadow: 0 0 8px rgba(44, 83, 100, 0.2);
             background: #fff;
-        }
-
-        label {
-            font-size: 13px;
-            font-weight: 600;
-            color: #2c5364;
-            margin-bottom: 8px;
-            display: block;
-            margin-left: 5px;
         }
 
         button {
@@ -129,20 +140,8 @@
             filter: brightness(1.1);
         }
 
-        button:active {
-            transform: translateY(-1px);
-        }
-
-        /* Style spécial pour l'icône échec dans le titre */
-        .chess-icon {
-            font-size: 2rem;
-            display: block;
-            margin-bottom: 10px;
-        }
-
         @media (max-width: 480px) {
             .card {
-                margin: 20px;
                 padding: 30px 20px;
             }
         }
@@ -168,7 +167,7 @@
 
         <label>Votre Promotion</label>
         <select name="promotion" required>
-            <option value="">Choisir</option>
+            <option value="">Choisir...</option>
             <optgroup label="Pré-ESI">
                 <option value="PEA">Pré-ESI A</option>
                 <option value="PEB">Pré-ESI B</option>
