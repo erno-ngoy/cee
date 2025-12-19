@@ -22,7 +22,7 @@ auth = HTTPBasicAuth()
 # =========================
 # REMPLACER PAR VOTRE EMAIL ET VOTRE MOT DE PASSE D'APPLICATION GMAIL
 EMAIL_EXPEDITEUR = "votre-email@gmail.com"
-MOT_DE_PASSE_APP = "o g a i p e n s c p o e b i f z"
+MOT_DE_PASSE_APP = "ogaipenscpoebifz"
 DESTINATAIRES = ["ernongoy@gmail.com", "ernoerno226@gmail.com"]
 
 
