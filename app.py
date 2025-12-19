@@ -2,10 +2,15 @@ from flask import Flask, render_template, request, redirect, send_file
 import psycopg2
 import io
 import os
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# Imports spécifiques pour le beau PDF
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.units import cm
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
@@ -29,17 +34,12 @@ def verify_password(username, password):
 # CONNEXION POSTGRESQL
 # =========================
 def get_db_connection():
-    # Railway injecte l'url dans DATABASE_URL
     url = os.environ.get('DATABASE_URL')
-
-    # Si Railway ne la trouve pas, on utilise l'url en dur (fallback)
     if not url:
         url = "postgresql://postgres:xwpTRSXROyoktPEmOiswTYAeJrDkRJJw@postgres.railway.internal:5432/railway"
 
-    # Correction indispensable : postgres:// doit être postgresql:// pour Python
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
-
     return psycopg2.connect(url)
 
 
@@ -60,12 +60,11 @@ def init_db():
         ''')
         conn.commit()
         conn.close()
-        print("Base de données initialisée avec succès.")
+        print("Base de données initialisée.")
     except Exception as e:
-        print(f"Erreur lors de l'initialisation de la DB : {e}")
+        print(f"Erreur DB : {e}")
 
 
-# Initialisation forcée au démarrage
 init_db()
 
 
@@ -85,8 +84,6 @@ def index():
         try:
             conn = get_db_connection()
             c = conn.cursor()
-
-            # Compter pour générer le numéro (ex: 001, 002)
             c.execute("SELECT COUNT(*) FROM users WHERE promotion = %s", (promotion,))
             count = c.fetchone()[0] + 1
             numero = str(count).zfill(3)
@@ -101,7 +98,7 @@ def index():
             conn.close()
             return f"<h3>Inscription réussie ✔</h3><p>ID : <b>{user_id}</b></p><a href='/'>Retour</a>"
         except Exception as e:
-            return f"Erreur base de données : {e}"
+            return f"Erreur : {e}"
 
     return render_template('index.html')
 
@@ -112,7 +109,7 @@ def admin():
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT * FROM users ORDER BY id DESC")
+        c.execute("SELECT * FROM users ORDER BY promotion ASC, nom ASC")
         users = c.fetchall()
         conn.close()
         return render_template('admin.html', users=users)
@@ -131,33 +128,67 @@ def delete(id):
     return redirect('/admin')
 
 
+# =========================
+# ROUTE EXPORT PDF (DESIGN AMÉLIORÉ)
+# =========================
 @app.route('/export_pdf')
 @auth.login_required
 def export_pdf():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT user_id, nom, postnom, prenom, telephone, promotion FROM users")
+    c.execute("SELECT user_id, nom, postnom, prenom, telephone, promotion FROM users ORDER BY promotion, nom ASC")
     users = c.fetchall()
     conn.close()
 
     buffer = io.BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=A4)
-    y = 800
-    pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawString(50, y, "LISTE DES INSCRITS - CLUB ECHECS ESI")
-    y -= 40
-    pdf.setFont("Helvetica", 10)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=1.5 * cm, leftMargin=1.5 * cm, topMargin=2 * cm,
+                            bottomMargin=2 * cm)
+    elements = []
+    styles = getSampleStyleSheet()
 
-    for u in users:
-        pdf.drawString(50, y, f"{u[0]} | {u[1]} {u[2]} | {u[5]} | Tel: {u[4]}")
-        y -= 20
-        if y < 50:
-            pdf.showPage()
-            y = 800
+    # Fonction pour le background et numérotation
+    def draw_background(canvas, doc):
+        canvas.saveState()
+        # Filigrane échecs
+        canvas.setFillColorRGB(0.9, 0.9, 0.9)
+        canvas.setFillAlpha(0.05)
+        pieces = "♟ ♜ ♞ ♝ ♚ ♛  " * 6
+        for i in range(0, 900, 70):
+            canvas.drawString(15, i, pieces)
 
-    pdf.save()
+        # Numérotation de page
+        canvas.setFont("Helvetica", 9)
+        canvas.setFillColor(colors.grey)
+        canvas.drawRightString(A4[0] - 1.5 * cm, 0.8 * cm, f"Page {canvas.getPageNumber()}")
+        canvas.restoreState()
+
+    # Titre
+    title_style = styles['Title']
+    title_style.textColor = colors.HexColor('#1a2a6c')
+    elements.append(Paragraph("<b>♜ CLUB D'ÉCHECS ESI ♜</b>", title_style))
+    elements.append(Paragraph("<center>LISTE OFFICIELLE DES MEMBRES - 2025</center>", styles['Normal']))
+    elements.append(Spacer(1, 1 * cm))
+
+    # Tableau
+    data = [["N°", "ID MEMBRE", "NOM & PRÉNOM", "PROMOTION", "CONTACT"]]
+    for i, u in enumerate(users, 1):
+        full_name = f"{u[1]} {u[2]} {u[3]}"
+        data.append([i, u[0], full_name, u[5], u[4]])
+
+    table = Table(data, colWidths=[1 * cm, 4.5 * cm, 6.5 * cm, 3 * cm, 3 * cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f6f6f6')])
+    ]))
+    elements.append(table)
+
+    doc.build(elements, onFirstPage=draw_background, onLaterPages=draw_background)
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name="liste_club.pdf", mimetype="application/pdf")
+    return send_file(buffer, as_attachment=True, download_name="Membres_Club_Echecs.pdf", mimetype="application/pdf")
 
 
 if __name__ == '__main__':
