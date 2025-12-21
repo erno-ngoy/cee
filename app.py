@@ -7,13 +7,6 @@ from email.mime.text import MIMEText
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Imports pour le PDF
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
-from reportlab.lib.units import cm
-
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 
@@ -60,7 +53,7 @@ def get_db_connection():
     return psycopg2.connect(url)
 
 # =========================
-# DESIGN CARTE DE MEMBRE (PNG Téléchargeable)
+# PAGE DE RÉUSSITE + CARTE DE MEMBRE
 # =========================
 SUCCESS_HTML = """
 <!DOCTYPE html>
@@ -81,11 +74,12 @@ SUCCESS_HTML = """
         .label { font-size: 10px; text-transform: uppercase; color: #999; font-weight: bold; display: block; }
         .value { font-size: 16px; color: #1a2a6c; font-weight: bold; }
         .user-id { background: #1a2a6c; color: #ffd700; padding: 12px; border-radius: 10px; font-family: monospace; font-size: 20px; font-weight: bold; margin: 20px 0; }
-        .qr-area img { width: 110px; height: 110px; background: #f4f4f4; padding: 5px; border-radius: 5px; }
+        .qr-area { display: flex; justify-content: center; margin-top: 10px; }
+        .qr-area img { width: 120px; height: 120px; border: 1px solid #eee; padding: 5px; background: white; }
         .footer-text { font-size: 9px; color: #aaa; margin-top: 15px; font-style: italic; }
         .actions { margin-top: 30px; display: flex; flex-direction: column; gap: 12px; width: 350px; }
         .btn { padding: 15px; border-radius: 12px; font-weight: bold; text-align: center; cursor: pointer; border: none; text-decoration: none; font-size: 14px; transition: 0.3s; }
-        .btn-download { background: #ffd700; color: #000; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
+        .btn-download { background: #ffd700; color: #000; }
         .btn-home { background: rgba(255,255,255,0.1); color: white; border: 1px solid white; }
     </style>
 </head>
@@ -100,25 +94,23 @@ SUCCESS_HTML = """
             <span class="value">{{prenom}} {{nom}}</span>
         </div>
         <div class="info-group">
-            <span class="label">Promotion & Faculté</span>
+            <span class="label">Promotion</span>
             <span class="value">{{promotion}}</span>
         </div>
         <div class="user-id">{{user_id}}</div>
         <div class="qr-area">
-            <img src="https://chart.googleapis.com/chart?chs=150x150&cht=qr&chl={{user_id}}&choe=UTF-8" alt="QR Code">
+            <img crossorigin="anonymous" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{user_id}}" alt="QR Code">
         </div>
-        <div class="footer-text">Cette carte est strictement personnelle et obligatoire pour les tournois.</div>
+        <div class="footer-text">Présentez cette carte lors des tournois officiels.</div>
     </div>
-
     <div class="actions">
         <button onclick="downloadCard()" class="btn btn-download">📥 TÉLÉCHARGER MA CARTE (PNG)</button>
         <a href="/classement" class="btn btn-home">VOIR LE CLASSEMENT</a>
     </div>
-
     <script>
         function downloadCard() {
             const card = document.getElementById('memberCard');
-            html2canvas(card, { scale: 3, useCORS: true }).then(canvas => {
+            html2canvas(card, { useCORS: true, scale: 3 }).then(canvas => {
                 const link = document.createElement('a');
                 link.download = 'Carte_Club_Echecs_{{prenom}}.png';
                 link.href = canvas.toDataURL("image/png");
@@ -130,9 +122,6 @@ SUCCESS_HTML = """
 </html>
 """
 
-# =========================
-# ROUTES
-# =========================
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -154,7 +143,7 @@ def index():
                 conn.commit(); is_already = False
                 notifier_activite("Nouveau Membre", f"{prenom} {nom} ({promotion}) s'est inscrit.")
             conn.close()
-            return render_template_string(SUCCESS_HTML, user_id=user_id, prenom=prenom, nom=nom, promotion=promotion, is_already=is_already)
+            return render_template_string(SUCCESS_HTML, user_id=user_id, prenom=prenom, nom=nom, promotion=promotion)
         except Exception as e: return f"Erreur : {e}"
     return render_template('index.html')
 
@@ -162,7 +151,7 @@ def index():
 @auth.login_required
 def admin():
     conn = get_db_connection(); c = conn.cursor()
-    c.execute("SELECT id, user_id, nom, postnom, prenom, telephone, promotion, points FROM users ORDER BY points DESC, nom ASC")
+    c.execute("SELECT id, user_id, nom, postnom, prenom, telephone, promotion, points FROM users ORDER BY points DESC")
     users = c.fetchall(); conn.close()
     return render_template('admin.html', users=users)
 
@@ -193,7 +182,7 @@ def delete(id):
 @app.route('/classement')
 def classement():
     conn = get_db_connection(); c = conn.cursor()
-    c.execute("SELECT prenom, nom, promotion, points FROM users ORDER BY points DESC, nom ASC")
+    c.execute("SELECT prenom, nom, promotion, points FROM users ORDER BY points DESC")
     members = c.fetchall(); conn.close()
     return render_template('classement.html', members=members)
 
