@@ -83,15 +83,43 @@
     // --- DONNÉES DYNAMIQUES ---
     const rawData = [{% for user in users %}{ prenom: "{{ user[4] }}", promo: "{{ user[6] }}", pts: {{ user[7] }} },{% endfor %}];
 
+    // Fonction pour générer une palette de couleurs variées
+    function generateColors(num) {
+        const baseColors = [
+            '#1a2a6c', '#00c853', '#00e5ff', '#ffb300', '#f44336',
+            '#9c27b0', '#3f51b5', '#009688', '#ff5722', '#795548',
+            '#607d8b', '#e91e63', '#4caf50', '#ffeb3b', '#2196f3'
+        ];
+        // Si on a plus de catégories que de couleurs de base, on répète avec une nuance différente ou on complète
+        let palette = [];
+        for(let i=0; i<num; i++) {
+            palette.push(baseColors[i % baseColors.length]);
+        }
+        return palette;
+    }
+
     // Graphique Promo
-    const promoCounts = {}; rawData.forEach(u => { promoCounts[u.promo] = (promoCounts[u.promo] || 0) + 1; });
+    const promoCounts = {};
+    rawData.forEach(u => { promoCounts[u.promo] = (promoCounts[u.promo] || 0) + 1; });
+    const promoLabels = Object.keys(promoCounts);
+
     new Chart(document.getElementById('promoChart'), {
         type: 'doughnut',
         data: {
-            labels: Object.keys(promoCounts),
-            datasets: [{ data: Object.values(promoCounts), backgroundColor: ['#1a2a6c', '#00c853', '#00e5ff', '#ffb300', '#f44336'] }]
+            labels: promoLabels,
+            datasets: [{
+                data: Object.values(promoCounts),
+                backgroundColor: generateColors(promoLabels.length)
+            }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Répartition par Promotion' } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Répartition par Promotion' },
+                legend: { position: 'bottom' }
+            }
+        }
     });
 
     // Graphique Top 5
@@ -100,9 +128,23 @@
         type: 'bar',
         data: {
             labels: top5.map(u => u.prenom),
-            datasets: [{ label: 'Points', data: top5.map(u => u.pts), backgroundColor: '#2c5364' }]
+            datasets: [{
+                label: 'Points',
+                data: top5.map(u => u.pts),
+                backgroundColor: generateColors(top5.length) // Chaque barre aura sa propre couleur
+            }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Top 5 Joueurs' } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: { display: true, text: 'Top 5 Joueurs' },
+                legend: { display: false } // Pas besoin de légende pour les points ici
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
     });
 
     // Recherche
