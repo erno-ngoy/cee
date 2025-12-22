@@ -7,6 +7,13 @@ from email.mime.text import MIMEText
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Imports requis pour la génération du PDF
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.units import cm
+
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 
@@ -15,7 +22,8 @@ auth = HTTPBasicAuth()
 # =========================
 EMAIL_EXPEDITEUR = "ton-email@gmail.com"
 MOT_DE_PASSE_APP = "ogaipenscpoebifz"
-DESTINATAIRES = ["ernongoy@gmail.com", "ernoerno226@gmail.com"]
+DESTINATAIRES = ["ernongoy@gmail.com", "arnoerno226@gmail.com"]
+
 
 def notifier_activite(sujet, message_corps):
     try:
@@ -31,15 +39,18 @@ def notifier_activite(sujet, message_corps):
     except Exception as e:
         print(f"ERREUR EMAIL : {e}")
 
+
 # =========================
 # SÉCURITÉ ADMIN
 # =========================
 users_auth = {"admin": generate_password_hash("esi-echecs-2025")}
 
+
 @auth.verify_password
 def verify_password(username, password):
     if username in users_auth and check_password_hash(users_auth.get(username), password):
         return username
+
 
 # =========================
 # CONNEXION POSTGRESQL
@@ -52,8 +63,9 @@ def get_db_connection():
         url = url.replace("postgres://", "postgresql://", 1)
     return psycopg2.connect(url)
 
+
 # =========================
-# PAGE DE RÉUSSITE + CARTE DE MEMBRE
+# DESIGN CARTE DE MEMBRE
 # =========================
 SUCCESS_HTML = """
 <!DOCTYPE html>
@@ -64,55 +76,37 @@ SUCCESS_HTML = """
     <style>
         body { background: #0f2027; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; color: white; }
         #memberCard { 
-            background: white; color: #333; width: 350px; padding: 25px; border-radius: 20px; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5); text-align: center; position: relative;
-            border-top: 12px solid #1a2a6c;
+            background: white; color: #333; width: 340px; padding: 25px; border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5); text-align: center; border-top: 12px solid #1a2a6c;
         }
-        .card-header h3 { margin: 0; color: #1a2a6c; font-size: 20px; letter-spacing: 1px; }
-        .card-header p { margin: 5px 0 20px; font-size: 12px; color: #666; font-weight: bold; }
-        .info-group { text-align: left; margin-bottom: 12px; }
-        .label { font-size: 10px; text-transform: uppercase; color: #999; font-weight: bold; display: block; }
-        .value { font-size: 16px; color: #1a2a6c; font-weight: bold; }
-        .user-id { background: #1a2a6c; color: #ffd700; padding: 12px; border-radius: 10px; font-family: monospace; font-size: 20px; font-weight: bold; margin: 20px 0; }
-        .qr-area { display: flex; justify-content: center; margin-top: 10px; }
-        .qr-area img { width: 120px; height: 120px; border: 1px solid #eee; padding: 5px; background: white; }
-        .footer-text { font-size: 9px; color: #aaa; margin-top: 15px; font-style: italic; }
-        .actions { margin-top: 30px; display: flex; flex-direction: column; gap: 12px; width: 350px; }
-        .btn { padding: 15px; border-radius: 12px; font-weight: bold; text-align: center; cursor: pointer; border: none; text-decoration: none; font-size: 14px; transition: 0.3s; }
-        .btn-download { background: #ffd700; color: #000; }
-        .btn-home { background: rgba(255,255,255,0.1); color: white; border: 1px solid white; }
+        .user-id { background: #1a2a6c; color: #ffd700; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 18px; font-weight: bold; margin: 15px 0; }
+        .qr-area img { width: 120px; height: 120px; }
+        .actions { margin-top: 25px; display: flex; flex-direction: column; gap: 10px; width: 340px; }
+        .btn { padding: 15px; border-radius: 12px; font-weight: bold; text-align: center; cursor: pointer; text-decoration: none; border: none; }
     </style>
 </head>
 <body>
     <div id="memberCard">
-        <div class="card-header">
-            <h3>CLUB D'ÉCHECS ESI</h3>
-            <p>CARTE OFFICIELLE DE MEMBRE</p>
-        </div>
-        <div class="info-group">
-            <span class="label">Nom Complet</span>
-            <span class="value">{{prenom}} {{nom}}</span>
-        </div>
-        <div class="info-group">
-            <span class="label">Promotion</span>
-            <span class="value">{{promotion}}</span>
+        <h3 style="color:#1a2a6c; margin:0;">CLUB D'ÉCHECS ESI</h3>
+        <p style="font-size:12px; color:#666;">CARTE OFFICIELLE</p>
+        <div style="text-align:left; margin-top:15px;">
+            <small style="color:#999; font-weight:bold;">NOM COMPLET</small><br>
+            <span style="font-weight:bold; color:#1a2a6c;">{{prenom}} {{nom}}</span>
         </div>
         <div class="user-id">{{user_id}}</div>
         <div class="qr-area">
             <img crossorigin="anonymous" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{user_id}}" alt="QR Code">
         </div>
-        <div class="footer-text">Présentez cette carte lors des tournois officiels.</div>
     </div>
     <div class="actions">
-        <button onclick="downloadCard()" class="btn btn-download">📥 TÉLÉCHARGER MA CARTE (PNG)</button>
-        <a href="/classement" class="btn btn-home">VOIR LE CLASSEMENT</a>
+        <button onclick="downloadCard()" class="btn" style="background:#ffd700; color:#000;">📥 TÉLÉCHARGER LA CARTE (PNG)</button>
+        <a href="/classement" class="btn" style="background:rgba(255,255,255,0.1); color:white; border:1px solid white;">VOIR LE CLASSEMENT</a>
     </div>
     <script>
         function downloadCard() {
-            const card = document.getElementById('memberCard');
-            html2canvas(card, { useCORS: true, scale: 3 }).then(canvas => {
+            html2canvas(document.getElementById('memberCard'), {useCORS: true, scale: 3}).then(canvas => {
                 const link = document.createElement('a');
-                link.download = 'Carte_Club_Echecs_{{prenom}}.png';
+                link.download = 'Carte_{{prenom}}.png';
                 link.href = canvas.toDataURL("image/png");
                 link.click();
             });
@@ -121,6 +115,11 @@ SUCCESS_HTML = """
 </body>
 </html>
 """
+
+
+# =========================
+# ROUTES
+# =========================
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -131,60 +130,119 @@ def index():
         telephone = request.form['telephone'].strip()
         promotion = request.form['promotion']
         try:
-            conn = get_db_connection(); c = conn.cursor()
+            conn = get_db_connection();
+            c = conn.cursor()
             c.execute("SELECT user_id FROM users WHERE nom=%s AND postnom=%s AND prenom=%s", (nom, postnom, prenom))
             existing = c.fetchone()
             if existing:
-                user_id, is_already = existing[0], True
+                user_id = existing[0]
             else:
                 c.execute("SELECT COUNT(*) FROM users WHERE promotion = %s", (promotion,))
                 user_id = f"{promotion}-{nom}-{str(c.fetchone()[0] + 1).zfill(3)}"
-                c.execute("INSERT INTO users (user_id, nom, postnom, prenom, telephone, promotion) VALUES (%s,%s,%s,%s,%s,%s)", (user_id, nom, postnom, prenom, telephone, promotion))
-                conn.commit(); is_already = False
+                c.execute(
+                    "INSERT INTO users (user_id, nom, postnom, prenom, telephone, promotion) VALUES (%s,%s,%s,%s,%s,%s)",
+                    (user_id, nom, postnom, prenom, telephone, promotion))
+                conn.commit()
                 notifier_activite("Nouveau Membre", f"{prenom} {nom} ({promotion}) s'est inscrit.")
             conn.close()
             return render_template_string(SUCCESS_HTML, user_id=user_id, prenom=prenom, nom=nom, promotion=promotion)
-        except Exception as e: return f"Erreur : {e}"
+        except Exception as e:
+            return f"Erreur : {e}"
     return render_template('index.html')
+
 
 @app.route('/admin')
 @auth.login_required
 def admin():
-    conn = get_db_connection(); c = conn.cursor()
+    conn = get_db_connection();
+    c = conn.cursor()
     c.execute("SELECT id, user_id, nom, postnom, prenom, telephone, promotion, points FROM users ORDER BY points DESC")
-    users = c.fetchall(); conn.close()
+    users = c.fetchall();
+    conn.close()
     return render_template('admin.html', users=users)
+
 
 @app.route('/add_point/<int:id>')
 @auth.login_required
 def add_point(id):
-    conn = get_db_connection(); c = conn.cursor()
+    conn = get_db_connection();
+    c = conn.cursor()
     c.execute("UPDATE users SET points = points + 1 WHERE id = %s", (id,))
-    conn.commit(); conn.close()
+    conn.commit();
+    conn.close()
     return redirect('/admin')
+
 
 @app.route('/remove_point/<int:id>')
 @auth.login_required
 def remove_point(id):
-    conn = get_db_connection(); c = conn.cursor()
+    conn = get_db_connection();
+    c = conn.cursor()
     c.execute("UPDATE users SET points = GREATEST(0, points - 1) WHERE id = %s", (id,))
-    conn.commit(); conn.close()
+    conn.commit();
+    conn.close()
     return redirect('/admin')
+
+
+# --- ROUTE PDF RÉINTÉGRÉE ---
+@app.route('/export_pdf')
+@auth.login_required
+def export_pdf():
+    try:
+        conn = get_db_connection();
+        c = conn.cursor()
+        c.execute("SELECT user_id, nom, postnom, prenom, points, promotion FROM users ORDER BY points DESC")
+        users = c.fetchall();
+        conn.close()
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        elements.append(Paragraph("LISTE DES MEMBRES - CLUB D'ÉCHECS ESI", styles['Title']))
+
+        data = [["ID UNIQUE", "NOM & PRÉNOM", "PROMO", "PTS"]]
+        for u in users:
+            data.append([u[0], f"{u[1]} {u[3]}", u[5], str(u[4])])
+
+        t = Table(data, colWidths=[4 * cm, 8 * cm, 3 * cm, 2 * cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1a2a6c")),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ]))
+        elements.append(t)
+        doc.build(elements)
+        buffer.seek(0)
+        return send_file(buffer, as_attachment=True, download_name="membres_echecs_esi.pdf", mimetype="application/pdf")
+    except Exception as e:
+        return f"Erreur lors de la génération du PDF : {e}"
+
 
 @app.route('/delete/<int:id>')
 @auth.login_required
 def delete(id):
-    conn = get_db_connection(); c = conn.cursor()
+    conn = get_db_connection();
+    c = conn.cursor()
     c.execute("DELETE FROM users WHERE id = %s", (id,))
-    conn.commit(); conn.close()
+    conn.commit();
+    conn.close()
     return redirect('/admin')
+
 
 @app.route('/classement')
 def classement():
-    conn = get_db_connection(); c = conn.cursor()
+    conn = get_db_connection();
+    c = conn.cursor()
     c.execute("SELECT prenom, nom, promotion, points FROM users ORDER BY points DESC")
-    members = c.fetchall(); conn.close()
+    members = c.fetchall();
+    conn.close()
     return render_template('classement.html', members=members)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
