@@ -34,14 +34,29 @@ def notifier_activite(sujet, message_corps):
         msg['To'] = ", ".join(DESTINATAIRES)
 
         # Timeout réduit à 2 secondes pour ne pas bloquer le serveur
-        # 'with' assure la fermeture propre de la connexion
         with smtplib.SMTP('smtp.gmail.com', 587, timeout=2) as serveur:
             serveur.starttls()
             serveur.login(EMAIL_EXPEDITEUR, MOT_DE_PASSE_APP)
             serveur.sendmail(EMAIL_EXPEDITEUR, DESTINATAIRES, msg.as_string())
     except Exception as e:
-        # Affiche l'erreur dans les logs Railway mais laisse le site fonctionner
         print(f"NOTIFICATION EMAIL IGNORÉE (Problème réseau Railway) : {e}")
+
+
+# =========================
+# GESTIONNAIRE D'ERREUR GLOBAL (AJOUTÉ)
+# =========================
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Capture toutes les erreurs et affiche un message simple"""
+    print(f"ERREUR CAPTURÉE : {e}") # Visible uniquement dans tes logs Railway
+    return """
+    <div style="text-align:center; padding:50px; font-family:sans-serif; background:#0f2027; color:white; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <h1 style="color:#ffd700; font-size:40px;">♟️ Oups !</h1>
+        <p style="font-size:18px;">Une petite erreur technique est survenue.</p>
+        <p style="color:#888;">L'administrateur a été notifié dans les logs.</p>
+        <a href="/" style="margin-top:20px; color:#ffd700; text-decoration:none; border:1px solid #ffd700; padding:10px 20px; border-radius:5px;">Retour à l'accueil</a>
+    </div>
+    """, 500
 
 
 # =========================
@@ -147,12 +162,12 @@ def index():
                     "INSERT INTO users (user_id, nom, postnom, prenom, telephone, promotion) VALUES (%s,%s,%s,%s,%s,%s)",
                     (user_id, nom, postnom, prenom, telephone, promotion))
                 conn.commit()
-                # Cette ligne ne bloquera plus le chargement de la page
                 notifier_activite("Nouveau Membre", f"{prenom} {nom} ({promotion}) s'est inscrit.")
             conn.close()
             return render_template_string(SUCCESS_HTML, user_id=user_id, prenom=prenom, nom=nom, promotion=promotion)
         except Exception as e:
-            return f"Erreur : {e}"
+            # Cette erreur sera maintenant aussi capturée par le handler global si nécessaire
+            raise e
     return render_template('index.html')
 
 
@@ -224,7 +239,7 @@ def export_pdf():
         buffer.seek(0)
         return send_file(buffer, as_attachment=True, download_name="membres_echecs_esi.pdf", mimetype="application/pdf")
     except Exception as e:
-        return f"Erreur lors de la génération du PDF : {e}"
+        raise e
 
 
 @app.route('/delete/<int:id>')
@@ -249,6 +264,5 @@ def classement():
 
 
 if __name__ == '__main__':
-    # Railway utilise la variable d'environnement PORT
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
