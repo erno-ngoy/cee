@@ -22,22 +22,26 @@ auth = HTTPBasicAuth()
 # =========================
 EMAIL_EXPEDITEUR = "ton-email@gmail.com"
 MOT_DE_PASSE_APP = "ogaipenscpoebifz"
-DESTINATAIRES = ["ernongoy@gmail.com", "arnoerno226@gmail.com"]
+DESTINATAIRES = ["ernongoy@gmail.com", "ernoerno226@gmail.com"]
 
 
 def notifier_activite(sujet, message_corps):
+    """Version sécurisée pour éviter les erreurs 502 et timeouts Railway"""
     try:
         msg = MIMEText(message_corps)
         msg['Subject'] = f"♟️ ESI ECHECS : {sujet}"
         msg['From'] = EMAIL_EXPEDITEUR
         msg['To'] = ", ".join(DESTINATAIRES)
-        serveur = smtplib.SMTP('smtp.gmail.com', 587, timeout=10)
-        serveur.starttls()
-        serveur.login(EMAIL_EXPEDITEUR, MOT_DE_PASSE_APP)
-        serveur.sendmail(EMAIL_EXPEDITEUR, DESTINATAIRES, msg.as_string())
-        serveur.quit()
+
+        # Timeout réduit à 2 secondes pour ne pas bloquer le serveur
+        # 'with' assure la fermeture propre de la connexion
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=2) as serveur:
+            serveur.starttls()
+            serveur.login(EMAIL_EXPEDITEUR, MOT_DE_PASSE_APP)
+            serveur.sendmail(EMAIL_EXPEDITEUR, DESTINATAIRES, msg.as_string())
     except Exception as e:
-        print(f"ERREUR EMAIL : {e}")
+        # Affiche l'erreur dans les logs Railway mais laisse le site fonctionner
+        print(f"NOTIFICATION EMAIL IGNORÉE (Problème réseau Railway) : {e}")
 
 
 # =========================
@@ -130,7 +134,7 @@ def index():
         telephone = request.form['telephone'].strip()
         promotion = request.form['promotion']
         try:
-            conn = get_db_connection();
+            conn = get_db_connection()
             c = conn.cursor()
             c.execute("SELECT user_id FROM users WHERE nom=%s AND postnom=%s AND prenom=%s", (nom, postnom, prenom))
             existing = c.fetchone()
@@ -143,6 +147,7 @@ def index():
                     "INSERT INTO users (user_id, nom, postnom, prenom, telephone, promotion) VALUES (%s,%s,%s,%s,%s,%s)",
                     (user_id, nom, postnom, prenom, telephone, promotion))
                 conn.commit()
+                # Cette ligne ne bloquera plus le chargement de la page
                 notifier_activite("Nouveau Membre", f"{prenom} {nom} ({promotion}) s'est inscrit.")
             conn.close()
             return render_template_string(SUCCESS_HTML, user_id=user_id, prenom=prenom, nom=nom, promotion=promotion)
@@ -154,10 +159,10 @@ def index():
 @app.route('/admin')
 @auth.login_required
 def admin():
-    conn = get_db_connection();
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("SELECT id, user_id, nom, postnom, prenom, telephone, promotion, points FROM users ORDER BY points DESC")
-    users = c.fetchall();
+    users = c.fetchall()
     conn.close()
     return render_template('admin.html', users=users)
 
@@ -165,10 +170,10 @@ def admin():
 @app.route('/add_point/<int:id>')
 @auth.login_required
 def add_point(id):
-    conn = get_db_connection();
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("UPDATE users SET points = points + 1 WHERE id = %s", (id,))
-    conn.commit();
+    conn.commit()
     conn.close()
     return redirect('/admin')
 
@@ -176,23 +181,22 @@ def add_point(id):
 @app.route('/remove_point/<int:id>')
 @auth.login_required
 def remove_point(id):
-    conn = get_db_connection();
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("UPDATE users SET points = GREATEST(0, points - 1) WHERE id = %s", (id,))
-    conn.commit();
+    conn.commit()
     conn.close()
     return redirect('/admin')
 
 
-# --- ROUTE PDF RÉINTÉGRÉE ---
 @app.route('/export_pdf')
 @auth.login_required
 def export_pdf():
     try:
-        conn = get_db_connection();
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute("SELECT user_id, nom, postnom, prenom, points, promotion FROM users ORDER BY points DESC")
-        users = c.fetchall();
+        users = c.fetchall()
         conn.close()
 
         buffer = io.BytesIO()
@@ -226,23 +230,25 @@ def export_pdf():
 @app.route('/delete/<int:id>')
 @auth.login_required
 def delete(id):
-    conn = get_db_connection();
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("DELETE FROM users WHERE id = %s", (id,))
-    conn.commit();
+    conn.commit()
     conn.close()
     return redirect('/admin')
 
 
 @app.route('/classement')
 def classement():
-    conn = get_db_connection();
+    conn = get_db_connection()
     c = conn.cursor()
     c.execute("SELECT prenom, nom, promotion, points FROM users ORDER BY points DESC")
-    members = c.fetchall();
+    members = c.fetchall()
     conn.close()
     return render_template('classement.html', members=members)
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    # Railway utilise la variable d'environnement PORT
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
