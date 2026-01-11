@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Administration - ESI Échecs</title>
+    <title>Administration - {{ title }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -39,7 +39,10 @@
 <body>
 
 <div class="container">
-    <h2>♟️ Panneau d'Administration</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>{% if discipline == 'echecs' %}♟️{% else %}📖{% endif %} {{ title }}</h2>
+        <a href="/" style="color: #ffd700; text-decoration: none; font-weight: bold;">⬅ Retour au Portail</a>
+    </div>
 
     <div class="dashboard-grid">
         <div class="stat-card"><h3>Membres</h3><div class="value">{{ users|length }}</div></div>
@@ -54,7 +57,7 @@
 
     <div class="top-bar">
         <input type="text" id="searchInput" placeholder="🔍 Rechercher un joueur ou une promotion...">
-        <a href="/export_pdf" class="btn btn-pdf">📄 Exporter PDF</a>
+        <a href="/export_pdf_{{ discipline }}" class="btn btn-pdf">📄 Exporter PDF</a>
     </div>
 
     <table id="usersTable">
@@ -69,9 +72,15 @@
                 <td>{{ user[6] }}</td>
                 <td><span class="pts-badge">{{ user[7] }}</span></td>
                 <td>
-                    <a class="btn btn-win" href="/add_point/{{ user[0] }}">+1</a>
-                    <a class="btn btn-loss" href="/remove_point/{{ user[0] }}">-1</a>
-                    <a href="/delete/{{ user[0] }}" onclick="return confirm('Supprimer ?')" style="color:#d32f2f; margin-left:15px; text-decoration:none; font-size:18px;">🗑</a>
+                    {% if discipline == 'echecs' %}
+                        <a class="btn btn-win" href="/add_point/{{ user[0] }}">+1</a>
+                        <a class="btn btn-loss" href="/remove_point/{{ user[0] }}">-1</a>
+                    {% else %}
+                        <a class="btn btn-win" href="/add_point_ortho/{{ user[0] }}">+1</a>
+                        <a class="btn btn-loss" href="/remove_point_ortho/{{ user[0] }}">-1</a>
+                    {% endif %}
+
+                    <a href="/delete_{{ discipline }}/{{ user[0] }}" onclick="return confirm('Supprimer ?')" style="color:#d32f2f; margin-left:15px; text-decoration:none; font-size:18px;">🗑</a>
                 </td>
             </tr>
             {% endfor %}
@@ -90,7 +99,6 @@
             '#9c27b0', '#3f51b5', '#009688', '#ff5722', '#795548',
             '#607d8b', '#e91e63', '#4caf50', '#ffeb3b', '#2196f3'
         ];
-        // Si on a plus de catégories que de couleurs de base, on répète avec une nuance différente ou on complète
         let palette = [];
         for(let i=0; i<num; i++) {
             palette.push(baseColors[i % baseColors.length]);
@@ -131,7 +139,7 @@
             datasets: [{
                 label: 'Points',
                 data: top5.map(u => u.pts),
-                backgroundColor: generateColors(top5.length) // Chaque barre aura sa propre couleur
+                backgroundColor: generateColors(top5.length)
             }]
         },
         options: {
@@ -139,7 +147,7 @@
             maintainAspectRatio: false,
             plugins: {
                 title: { display: true, text: 'Top 5 Joueurs' },
-                legend: { display: false } // Pas besoin de légende pour les points ici
+                legend: { display: false }
             },
             scales: {
                 y: { beginAtZero: true }
