@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, send_file, render_template_string
+from flask import Flask, render_template, request, redirect, send_file, render_template_string, url_for
 import psycopg2
 import io
 import os
@@ -113,7 +113,7 @@ PORTAL_HTML = """
             <p>Concours d'Épellation</p>
         </a>
     </div>
-    <a href="/admin_portal" style="margin-top:50px; color:#555; text-decoration:none;">Accès Administration</a>
+    <a href="/admin" style="margin-top:50px; color:#555; text-decoration:none;">Accès Administration</a>
 </body>
 </html>
 """
@@ -250,17 +250,18 @@ def classement_ortho():
 # ADMINISTRATION MIXTE
 # =========================
 
-@app.route('/admin_portal')
+@app.route('/admin')
 @auth.login_required
 def admin_portal():
     return """
-    <body style="background:#0f2027; color:white; font-family:sans-serif; text-align:center; padding:50px;">
-        <h1>PANNEAU DE CONTRÔLE ADMIN</h1>
-        <div style="display:flex; gap:20px; justify-content:center; margin-top:30px;">
-            <a href="/admin_echecs" style="padding:30px; background:#1a2a6c; color:white; text-decoration:none; border-radius:15px; width:200px;">Gérer ÉCHECS</a>
-            <a href="/admin_ortho" style="padding:30px; background:#2c5364; color:white; text-decoration:none; border-radius:15px; width:200px;">Gérer ORTHOGRAPHE</a>
+    <body style="background:#0f2027; color:white; font-family:sans-serif; text-align:center; padding:50px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; margin:0;">
+        <h1 style="color:#ffd700;">PANNEAU DE CONTRÔLE ADMIN</h1>
+        <p>Sélectionnez la discipline à gérer :</p>
+        <div style="display:flex; gap:20px; justify-content:center; margin-top:30px; flex-wrap:wrap;">
+            <a href="/admin_echecs" style="padding:40px; background:#1a2a6c; color:white; text-decoration:none; border-radius:15px; width:200px; font-weight:bold; border: 1px solid rgba(255,255,255,0.2);">♟️ Gérer ÉCHECS</a>
+            <a href="/admin_ortho" style="padding:40px; background:#2c5364; color:white; text-decoration:none; border-radius:15px; width:200px; font-weight:bold; border: 1px solid rgba(255,255,255,0.2);">📖 Gérer ORTHOGRAPHE</a>
         </div>
-        <br><br><a href="/" style="color:#555;">Retour au site</a>
+        <br><br><a href="/" style="color:#888; text-decoration:none;">⬅ Retour au site public</a>
     </body>
     """
 
