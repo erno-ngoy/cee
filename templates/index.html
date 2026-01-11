@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Inscription - {{ club_name }}</title>
+    <title>Inscription - Club Échecs ESI</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2821792122445723"
@@ -20,7 +20,7 @@
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
             background-attachment: fixed;
             display: flex;
-            flex-direction: column;
+            flex-direction: column; /* Aligne la pub et la carte verticalement */
             justify-content: center;
             align-items: center;
             overflow-y: auto;
@@ -29,10 +29,9 @@
             padding: 20px;
         }
 
-        /* ♟️ ANIMATION D'ARRIÈRE-PLAN DYNAMIQUE */
+        /* ♟️ ANIMATION D'ARRIÈRE-PLAN FIXE */
         body::before {
-            /* On change les symboles selon la discipline */
-            content: "{% if discipline == 'echecs' %}♟ ♜ ♞ ♝ ♚ ♛{% else %}✎ 📖 🔠 📝 🖋️ 📚{% endif %}";
+            content: "♟ ♜ ♞ ♝ ♚ ♛ ♟ ♜ ♞ ♝ ♚ ♛";
             position: fixed;
             top: -50%;
             left: -50%;
@@ -51,6 +50,7 @@
             to { transform: rotate(5deg) translateX(-20%); }
         }
 
+        /* CONTENEUR PUBLICITAIRE */
         .ad-top {
             width: 100%;
             max-width: 420px;
@@ -95,8 +95,8 @@
             letter-spacing: 1px;
         }
 
-        .icon-header {
-            font-size: 2.5rem;
+        .chess-icon {
+            font-size: 2rem;
             display: block;
             margin-bottom: 10px;
         }
@@ -150,14 +150,10 @@
             filter: brightness(1.1);
         }
 
-        .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 20px;
-            color: #1a2a6c;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: bold;
+        @media (max-width: 480px) {
+            .card {
+                padding: 30px 20px;
+            }
         }
     </style>
 </head>
@@ -177,10 +173,8 @@
 
 <div class="card">
     <h2>
-        <span class="icon-header">
-            {% if discipline == 'echecs' %}♟️{% else %}📖{% endif %}
-        </span>
-        Bienvenue au {{ club_name }}
+        <span class="chess-icon">♟️</span>
+        Bienvenue au Club d'Échecs ESI
         <span>Formulaire d'Inscription Étudiant</span>
     </h2>
 
@@ -228,8 +222,6 @@
 
         <button type="submit">Confirmer l'inscription</button>
     </form>
-
-    <a href="/" class="back-link">⬅ Retour au choix de discipline</a>
 </div>
 
 </body>

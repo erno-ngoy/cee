@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classement - {{ club_name }}</title>
+    <title>Classement - Club Echecs ESI</title>
     <style>
         body { margin: 0; background: #0f2027; background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); font-family: 'Segoe UI', sans-serif; color: white; min-height: 100vh; padding: 20px; }
         .container { max-width: 700px; margin: auto; }
@@ -13,26 +13,11 @@
         .name { flex-grow: 1; margin-left: 10px; }
         .pts { background: #ffd700; color: black; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
         .top1 { background: rgba(255, 215, 0, 0.2); border: 1px solid #ffd700; }
-
-        /* Petit badge pour la discipline */
-        .discipline-badge {
-            text-align: center;
-            font-size: 0.9em;
-            background: rgba(255,255,255,0.05);
-            padding: 5px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏆 Classement</h1>
-
-        <div class="discipline-badge">
-            {% if discipline == 'echecs' %}♟️ Club d'Échecs ESI{% else %}📖 Orthographe & Épellation{% endif %}
-        </div>
-
         {% for m in members %}
         <div class="row {% if loop.index == 1 %}top1{% endif %}">
             <div class="rank">#{{ loop.index }}</div>
@@ -42,15 +27,9 @@
             </div>
             <div class="pts">{{ m[3] }} PTS</div>
         </div>
-        {% else %}
-        <div style="text-align: center; margin-top: 50px; opacity: 0.5;">
-            Aucun membre enregistré pour le moment.
-        </div>
         {% endfor %}
-
-        <div style="text-align: center; margin-top: 30px; display: flex; flex-direction: column; gap: 15px;">
-            <a href="/" style="color: #ffd700; text-decoration: none; font-weight: bold;">← Revenir au Portail</a>
-            <a href="{% if discipline == 'echecs' %}/echecs{% else %}/orthographe{% endif %}" style="color: white; text-decoration: none; opacity: 0.6; font-size: 0.9em;">S'inscrire à cette discipline</a>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="/" style="color: white; text-decoration: none; opacity: 0.6;">← Revenir à l'inscription</a>
         </div>
     </div>
 </body>
